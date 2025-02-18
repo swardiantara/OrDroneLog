@@ -229,7 +229,7 @@ class OrdinalContrastiveLoss(ContrastiveLoss):
         distances = self.distance_metric(rep_anchor, rep_other)
         label_distances = label_distances / (self.num_classes - 1)
         margins = self.margin + (2.0 - self.margin) * label_distances
-        is_positive = 1 if (label_distances == 0) else 0
+        is_positive = (label_distances == 0).float()
         losses = 0.5 * (
             is_positive.float() * distances.pow(2) + 
             (1 - is_positive.float()) * F.relu(margins - distances).pow(2)
