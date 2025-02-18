@@ -1,12 +1,12 @@
 #!/bin/bash
 datasets=( filtered )
 word_embeds=( drone-severity )
-encoders=( transformer )
+encoders=( transformer lstm gru )
 weight_class=( uniform )
 losses=( logloss )
 label_schemas=( 101 111 )
-poolings=( cls )
-bidirectionals=( true false )
+poolings=( cls last )
+bidirectionals=( true )
 n_layers=( 3 )
 n_heads=( 8 )
 
