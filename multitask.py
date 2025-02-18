@@ -28,7 +28,7 @@ parser.add_argument('--dataset', type=str, default='filtered',
                     choices=['filtered', 'unfiltered'])
 parser.add_argument('--output_dir', type=str, default='multi_dronelog',
                     help="Folder to store the experimental results. Default: multitask")
-parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
+parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity', 'ordinal-severity'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
 parser.add_argument('--encoder', type=str, choices=['transformer', 'lstm', 'gru', 'none'], default='none',
                     help="Encoder Architecture used to perform computation. Default: none.")
 parser.add_argument('--pooling', type=str, choices=['cls', 'max', 'avg', 'last'], default='avg',
