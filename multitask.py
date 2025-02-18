@@ -96,7 +96,7 @@ def main():
     bidirectional = True if args.bidirectional else False
     label_schema = args.label_schema
     save_best_model = True if args.save_best_model else False
-    output_dir = args.output_dir + '_' + str(n_epochs)
+    output_dir = f"{args.output_dir}_{args.word_embed}_{str(n_epochs)}"
     normalize_logits = True if args.normalize_logits else False
     exclude_cls_before = True if args.exclude_cls_before else False
     exclude_cls_after = True if args.exclude_cls_after else False
