@@ -186,6 +186,10 @@ def main():
         tokenizer = BertTokenizer.from_pretrained(bert_model_name)
         bert_model = BertModel.from_pretrained(bert_model_name).to(device)
     elif embedding_type == 'drone-severity':
+        bert_model_name = "swardiantara/drone-severity-embedding"
+        tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
+        bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
+    elif embedding_type == 'ordinal-severity':
         bert_model_name = "swardiantara/ordinal-severity-embedding"
         tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
         bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
