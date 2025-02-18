@@ -124,7 +124,7 @@ def visualize_prediction(test_loader, model, device, output_dir, prediction_df):
         ax.scatter(x_filtered, y_filtered, c=pred_colors, marker=markers[marker_idx], label=label)
                 
     legend = ax.legend()
-    handles = legend.legendHandles
+    handles = legend.legend_handles
     for i, handle in enumerate(handles):
         handle.set_color(colors[i])
         
