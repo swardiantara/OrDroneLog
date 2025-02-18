@@ -1,7 +1,7 @@
 #!/bin/bash
 datasets=( filtered )
 word_embeds=( bert drone-severity ordinal-severity )
-encoders=( transformer lstm gru linear )
+encoders=( transformer lstm gru none )
 weight_class=( uniform )
 losses=( logloss )
 label_schemas=( 101 111 )
