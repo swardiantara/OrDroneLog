@@ -84,6 +84,48 @@ class BinaryFocalLoss(nn.Module):
         return focal_loss.mean()
     
 
+class MultiTaskLoss(nn.Module):
+    def __init__(self, alpha=1.0, beta=1.0, class_weights=None, reduction='mean'):
+        """
+        Multitask loss function for multi-label classification using BCE with class weights.
+
+        Args:
+        - alpha (float): Weight for the first task (binary classification).
+        - beta (float): Weight for the second task (multi-label classification).
+        - class_weights (Tensor, optional): Shape (4,), weights for each label.
+        """
+        super(MultiTaskLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        # self.class_weights = class_weights  # Per-class weights
+        self.loss_fc = nn.BCEWithLogitsLoss(pos_weight=class_weights, reduction=reduction)
+        self.loss_binary = None
+        self.loss_multilabel = None
+
+    def forward(self, predictions, targets):
+        """
+        Compute the multitask loss.
+
+        Args:
+        - predictions (Tensor): Shape (batch_size, 4), raw logits.
+        - targets (Tensor): Shape (batch_size, 4), binary labels (0 or 1).
+
+        Returns:
+        - total_loss (Tensor): Weighted sum of losses.
+        """
+        # Compute BCE loss for all elements
+        loss = self.loss_fn(predictions, targets)  # Shape: (batch_size, 4)
+
+        # Apply task-specific weights
+        loss_binary = loss[:, 0] # First element: binary classification
+        loss_multilabel = loss[:, 1:] # Remaining elements: multi-label classification
+        self.loss_binary = loss_binary
+        self.loss_multilabel = loss_multilabel
+        # Compute total weighted loss
+        total_loss = self.alpha * loss_binary + self.beta * loss_multilabel
+        return total_loss
+    
+
 class SeverityCE(nn.Module):
     def __init__(self, reduction='mean', class_weights=None):
         super(SeverityCE, self).__init__()
@@ -227,8 +269,8 @@ class OrdinalContrastiveLoss(ContrastiveLoss):
         assert len(reps) == 2
         rep_anchor, rep_other = reps
         distances = self.distance_metric(rep_anchor, rep_other)
-        label_distances = label_distances / (self.num_classes - 1)
-        margins = self.margin + (2.0 - self.margin) * label_distances
+        # label_distances = label_distances / (self.num_classes - 1)
+        margins = self.margin + label_distances # (2.0 - self.margin) *
         is_positive = (label_distances == 0).float()
         losses = 0.5 * (
             is_positive.float() * distances.pow(2) + 
