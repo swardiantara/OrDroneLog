@@ -68,7 +68,9 @@ def create_pairs(df: pd.DataFrame, label = "nominal", distance: bool=False):
                     pair_label = abs(row['labelidx'] - other_row['labelidx'])
                 elif label == 'vector':
                     pair_label = cosine(row['label_vector'], other_row['label_vector'])
-                    
+                    print(f'i={i}, j={j}, dist: {pair_label}')
+                    print(f'L1 = {row['label_vector']}')
+                    print(f'L2 = {other_row['label_vector']}')
                 examples.append(InputExample(texts=[row['message'], other_row['message']], label=int(pair_label)))
     return examples
 
