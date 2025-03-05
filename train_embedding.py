@@ -34,7 +34,7 @@ class DroneLogsDataset(Dataset):
 df = pd.read_csv(os.path.join('dataset', 'filtered_train.csv'))  # Assume the CSV has 'message' and 'cluster_id' columns
 
 # Create pairs for contrastive learning
-def create_pairs(df: pd.DataFrame, label = "nominal", distance: bool=False):
+def create_pairs(df: pd.DataFrame, label_type = "nominal", distance: bool=False):
     label2id = {
         'normal': 1,
         'low': 2,
@@ -47,9 +47,9 @@ def create_pairs(df: pd.DataFrame, label = "nominal", distance: bool=False):
         'medium': [1,1,1,0],
         'high': [1,1,1,1]
     }
-    if label == 'nominal':
+    if label_type == 'nominal':
         df['labelidx'] = df['label'].map(label2id)
-    elif label == 'vector':
+    elif label_type == 'vector':
         df['label_vector'] = df['label'].map(label2vec)
     examples = []
     for label in df['label'].unique():
@@ -65,9 +65,9 @@ def create_pairs(df: pd.DataFrame, label = "nominal", distance: bool=False):
             for j, other_row in other_df.iterrows():
                 pair_label = 0
                 if distance:
-                    if label == 'nominal':
+                    if label_type == 'nominal':
                         pair_label = abs(row['labelidx'] - other_row['labelidx'])
-                    elif label == 'vector':
+                    elif label_type == 'vector':
                         pair_label = cosine(row['label_vector'], other_row['label_vector'])
                         print(f'i={i}, j={j}, dist: {pair_label}')
                         print(f'L1 = {row["label_vector"]}')
