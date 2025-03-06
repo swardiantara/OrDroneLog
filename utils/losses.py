@@ -98,7 +98,9 @@ class MultiTaskLoss(nn.Module):
         self.alpha = alpha
         self.beta = beta
         # self.class_weights = class_weights  # Per-class weights
-        self.loss_fc = nn.BCEWithLogitsLoss(pos_weight=class_weights, reduction=reduction)
+        # self.loss_fc = nn.BCEWithLogitsLoss(pos_weight=class_weights, reduction=reduction)
+        self.binary_fc = nn.BCEWithLogitsLoss(pos_weight=class_weights[0], reduction=reduction)
+        self.multilabel_fc = nn.BCEWithLogitsLoss(pos_weight=class_weights[1:], reduction=reduction)
         self.loss_binary = None
         self.loss_multilabel = None
 
@@ -114,15 +116,12 @@ class MultiTaskLoss(nn.Module):
         - total_loss (Tensor): Weighted sum of losses.
         """
         # Compute BCE loss for all elements
-        loss = self.loss_fc(predictions, targets)  # Shape: (batch_size, 4)
-
+        # loss = self.loss_fc(predictions, targets)  # Shape: (batch_size, 4)
         # Apply task-specific weights
-        loss_binary = loss[:, 0] # First element: binary classification
-        loss_multilabel = loss[:, 1:] # Remaining elements: multi-label classification
-        self.loss_binary = loss_binary
-        self.loss_multilabel = loss_multilabel
+        self.loss_binary = self.binary_fc(predictions[:, 0], targets[:, 0]) # First element: binary classification
+        self.loss_multilabel = self.multilabel_fc(predictions[:, 1:], targets[:, 1:]) # Remaining elements: multi-label classification
         # Compute total weighted loss
-        total_loss = self.alpha * loss_binary + self.beta * loss_multilabel
+        total_loss = self.alpha * self.loss_binary + self.beta * self.loss_multilabel
         return total_loss
     
 
