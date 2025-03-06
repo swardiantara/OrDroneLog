@@ -521,7 +521,8 @@ def main(args):
             all_preds_multiclass.extend(predicted_labels_multiclass_test)
             all_preds_probs_multiclass.extend(predicted_probs_multiclass_test)
             pred_probs_multiclass.extend(pred_probs_batch)
-            all_preds_probs_softmax.extend(probs_softmax_multiclass_test.cpu().numpy())
+            if args.decoding == 'argmax':
+                all_preds_probs_softmax.extend(probs_softmax_multiclass_test.cpu().numpy())
             label_indices = [label2idx.get(label) for label in label_names]
             regression_metric.update(predicted_label_indices, label_indices)
 
