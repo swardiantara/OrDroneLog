@@ -102,11 +102,12 @@ def set_seed(seed: int = 42) -> None:
 
 
 def main():
+    # Parse and load the arguments
+    args = parser.parse_args()
+    
     # Set global seed for reproducibility
     set_seed(args.seed)
     
-    # Parse and load the arguments
-    args = parser.parse_args()
     embedding_type = args.word_embed
     viz_projection = args.viz_projection
     class_weight = args.class_weight
