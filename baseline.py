@@ -399,16 +399,16 @@ def main():
             predicted_probs_multiclass_test, predicted_labels_multiclass_test = torch.max(logits_multiclass_test, dim=1)
             
             all_labels_multiclass.extend(labels_index)
-            print(f"labels_index: \n{labels_index}")
+            # print(f"labels_index: \n{labels_index}")
             all_preds_multiclass.extend(predicted_labels_multiclass_test.cpu().numpy())
             all_preds_probs_multiclass.extend(predicted_probs_multiclass_test.cpu().numpy())
             regression_metric.update(predicted_labels_multiclass_test, labels_index)
     # Calculate multiclass classification accuracy and report
     preds_decoded = [idx2label.get(key) for key in all_preds_multiclass]
-    print(f"preds_decoded: \n{preds_decoded}")
+    print(f"all_preds_multiclass: \n{all_preds_multiclass}")
     # label_encoder_multi.inverse_transform(all_preds_multiclass)
     tests_decoded = [idx2label.get(key) for key in all_labels_multiclass]
-    print(f"tests_decoded: \n{tests_decoded}")
+    print(f"all_labels_multiclass: \n{all_labels_multiclass}")
     # label_encoder_multi.inverse_transform(all_labels_multiclass)
 
     # Save the input, label, and preds for error analysis
