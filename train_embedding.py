@@ -7,9 +7,31 @@ from sentence_transformers import SentenceTransformer, InputExample
 from sentence_transformers.readers import InputExample
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 
-from scipy.spatial.distance import cosine
+from scipy.spatial.distance import cosine, euclidean
 
 from utils.losses import OrdinalContrastiveLoss
+
+
+def scale_l2_value(d, a=0, b=1, d_min=0, d_max=1.7320508075688772):
+    """
+    Scale a single L2 (Euclidean) distance value to a given range [a, b].
+
+    Parameters:
+    - d (float): The original L2 distance value.
+    - d_min (float): The minimum L2 distance in the dataset.
+    - d_max (float): The maximum L2 distance in the dataset.
+    - a (float): The lower bound of the new range.
+    - b (float): The upper bound of the new range.
+
+    Returns:
+    - float: The scaled L2 distance value.
+    """
+    if d_min == d_max:  # Prevent division by zero
+        return a  # If all distances are the same, return the lower bound
+
+    return a + ((d - d_min) * (b - a)) / (d_max - d_min)
+
+
 # Check if GPU is available
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'Using device: {device}')
@@ -34,7 +56,7 @@ class DroneLogsDataset(Dataset):
 df = pd.read_csv(os.path.join('dataset', 'filtered_train.csv'))  # Assume the CSV has 'message' and 'cluster_id' columns
 
 # Create pairs for contrastive learning
-def create_pairs(df: pd.DataFrame, label_type = "nominal", distance: bool=False):
+def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = cosine, distance: bool=False):
     label2id = {
         'normal': 1,
         'low': 2,
@@ -68,14 +90,12 @@ def create_pairs(df: pd.DataFrame, label_type = "nominal", distance: bool=False)
                     if label_type == 'nominal':
                         pair_label = abs(row['labelidx'] - other_row['labelidx'])
                     elif label_type == 'vector':
-                        pair_label = cosine(row['label_vector'], other_row['label_vector'])
-                        print(f'i={i}, j={j}, dist: {pair_label}')
-                        print(f'L1 = {row["label_vector"]}')
-                        print(f'L2 = {other_row["label_vector"]}')
+                        pair_label = distance_funct(row['label_vector'], other_row['label_vector'])
+                        pair_label = scale_l2_value(pair_label)
                 examples.append(InputExample(texts=[row['message'], other_row['message']], label=int(pair_label)))
     return examples
 
-examples = create_pairs(df, label='vector', distance=True)
+examples = create_pairs(df, label_type='vector', distance_funct=euclidean, distance=True)
 # Step 3: Create DataLoader
 train_dataloader = DataLoader(examples, shuffle=True, batch_size=64)
 # print(train_dataloader)
