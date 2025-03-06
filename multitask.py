@@ -93,8 +93,7 @@ def set_seed(seed: int = 42) -> None:
     # print(f"Random seed set as {seed}")
 
 
-def main():
-    args = get_args()
+def main(args):
     # Set global seed for reproducibility
     set_seed(args.seed)
     
@@ -624,4 +623,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = get_args()
+    main(args)
