@@ -498,16 +498,16 @@ def main(args):
             predicted_probs_multiclass_test = []
             pred_probs_batch = []
             if args.decoding == 'argmax':
-                logits_multiclass_test = torch.softmax(logits_multiclass_test, axis=1)
-                # predicted_labels_multiclass_test = torch.argmax(logits_multiclass_test, axis=1).cpu().numpy()
-                probs_softmax_multiclass_test, predicted_label_indices = torch.max(logits_multiclass_test, dim=1)
-                predicted_labels_multiclass_test = [idx2label.get(idx) for idx in predicted_label_indices.cpu().numpy()]
                 for logits in logits_multiclass_test:
                     after_sigmoid = torch.sigmoid(logits)
                     string_label = label_decoding([1 if element >= 0.5 else 0 for element in after_sigmoid])
                     pred_prob_sample = after_sigmoid[label_order.index(string_label)]
                     predicted_probs_multiclass_test.append(after_sigmoid.cpu().numpy().tolist())
                     pred_probs_batch.append(pred_prob_sample.cpu().item())
+                logits_multiclass_test = torch.softmax(logits_multiclass_test, axis=1)
+                # predicted_labels_multiclass_test = torch.argmax(logits_multiclass_test, axis=1).cpu().numpy()
+                probs_softmax_multiclass_test, predicted_label_indices = torch.max(logits_multiclass_test, dim=1)
+                predicted_labels_multiclass_test = [idx2label.get(idx) for idx in predicted_label_indices.cpu().numpy()]
             else:
                 for logits in logits_multiclass_test:
                     after_sigmoid = torch.sigmoid(logits)

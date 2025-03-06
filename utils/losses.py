@@ -114,7 +114,7 @@ class MultiTaskLoss(nn.Module):
         - total_loss (Tensor): Weighted sum of losses.
         """
         # Compute BCE loss for all elements
-        loss = self.loss_fn(predictions, targets)  # Shape: (batch_size, 4)
+        loss = self.loss_fc(predictions, targets)  # Shape: (batch_size, 4)
 
         # Apply task-specific weights
         loss_binary = loss[:, 0] # First element: binary classification
