@@ -23,10 +23,10 @@
     "best_epoch": 13,
     "best_val_f1": 0.8249267859175449,
     "best_val_acc": 0.8376068376068376,
-    "train_started_at": "2025-03-06 18:46:57.057343",
-    "train_finished_at": "2025-03-06 18:47:37.275800",
-    "train_duration": "40.218457 seconds",
-    "eval_started_at": "2025-03-06 18:47:37.625016",
-    "eval_finished_at": "2025-03-06 18:47:37.845039",
-    "eval_duration": "0.220023 seconds"
+    "train_started_at": "2025-03-06 19:16:39.789948",
+    "train_finished_at": "2025-03-06 19:17:19.652230",
+    "train_duration": "39.862282 seconds",
+    "eval_started_at": "2025-03-06 19:17:20.005372",
+    "eval_finished_at": "2025-03-06 19:17:20.226291",
+    "eval_duration": "0.220919 seconds"
 }
