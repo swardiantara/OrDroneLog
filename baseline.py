@@ -104,7 +104,7 @@ def set_seed(seed: int = 42) -> None:
 def main():
     # Parse and load the arguments
     args = parser.parse_args()
-    
+
     # Set global seed for reproducibility
     set_seed(args.seed)
     
@@ -402,11 +402,12 @@ def main():
             all_preds_multiclass.extend(predicted_labels_multiclass_test.cpu().numpy())
             all_preds_probs_multiclass.extend(predicted_probs_multiclass_test.cpu().numpy())
             regression_metric.update(predicted_labels_multiclass_test, labels_index)
-
     # Calculate multiclass classification accuracy and report
     preds_decoded = [idx2label.get(key) for key in all_preds_multiclass]
+    print(f"preds_decoded: \n{preds_decoded}")
     # label_encoder_multi.inverse_transform(all_preds_multiclass)
     tests_decoded = [idx2label.get(key) for key in all_labels_multiclass]
+    print(f"preds_decoded: \n{tests_decoded}")
     # label_encoder_multi.inverse_transform(all_labels_multiclass)
 
     # Save the input, label, and preds for error analysis
