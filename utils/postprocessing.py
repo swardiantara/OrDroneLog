@@ -71,7 +71,7 @@ def visualize_projection(dataset_loader, idx2label, model, device, output_dir):
             labels_index = batch["labels_index"]
     
             embeddings, _, _ = model(input_ids, attention_mask)
-            all_labels_multiclass.extend(labels_index)
+            all_labels_multiclass.extend(labels_index.cpu().numpy())
             all_embeddings.append(embeddings)
     
     tsne = TSNE(n_components=2, random_state=42)
