@@ -18,7 +18,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from transformers import BertModel, BertTokenizer, AutoModel, AutoTokenizer
 from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_recall_fscore_support
 
-from baseline import label2idx, idx2label, raw2label
+# from baseline import label2idx, idx2label, raw2label
 from models.dronelog import DroneLog
 from utils.losses import inverse_freq, FocalLoss, MultiTaskLoss
 from utils.assert_scenario import assert_baseline
@@ -26,6 +26,27 @@ from utils.postprocessing import visualize_projection, label2class, visualize_pr
 from utils.preprocessing import BaselineDataset, MultitaskDataset, assert_data_size, label2multitask110, label2multitask0101, label2multitask0111, label2multitask1101, label2multitask1111
 from utils.evaluation import RegressionMetrics
 
+
+raw2label = {
+        1: 'normal',
+        2: 'low',
+        3: 'medium',
+        4: 'high'
+    }
+
+label2idx = {
+    'normal': 0,
+    'low': 1,
+    'medium': 2,
+    'high': 3
+}
+
+idx2label = {
+    0: 'normal',
+    1: 'low',
+    2: 'medium',
+    3: 'high'
+}
 
 def get_args():
     parser = argparse.ArgumentParser()
