@@ -8,6 +8,7 @@ import datetime
 import torch
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ from torch.utils.data import DataLoader
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight
 from transformers import BertModel, BertTokenizer, AutoModel, AutoTokenizer
-from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_recall_fscore_support
+from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_recall_fscore_support, confusion_matrix
 
 from models.dronelog import DroneLog
 from utils.assert_scenario import assert_baseline
@@ -464,6 +465,16 @@ def main():
     with open(os.path.join(workdir, 'scenario_arguments.json'), 'w') as json_file:
         json.dump(arguments_dict, json_file, indent=4)
     
+    # generate a confusion matrix visualization to ease analysis
+    class_names = [key for key, _ in label2idx.items()]
+    conf_matrix = confusion_matrix(prediction_df['label'].to_list(), prediction_df['pred'].to_list(), labels=class_names)
+    plt.figure(figsize=(4, 3.5))
+    sns.heatmap(conf_matrix, annot=True, xticklabels=class_names, yticklabels=class_names, fmt='d', cmap='YlGnBu', cbar=False, square=False)
+    plt.xlabel('Predicted labels')
+    plt.ylabel('True labels')
+    plt.savefig(os.path.join(workdir, "confusion_matrix.pdf"), bbox_inches='tight')
+    plt.close()
+
     if viz_projection:
         # Save the model's hidden state to a 2D plot
         visualize_projection(merged_loader, idx2label, best_model.to(device), device, workdir)
