@@ -123,7 +123,7 @@ def main():
         os.makedirs(root_workdir)
 
     scenario_dir = os.path.join(encoder_type, class_weight, loss_fc, pooling, str(
-        n_layers), str(n_heads), 'bidirectional' if bidirectional else 'unidirectional', label_schema)
+        n_layers), str(n_heads), 'bidirectional' if bidirectional else 'unidirectional', f"{label_schema}_{args.decoding}")
     workdir = os.path.join(root_workdir, scenario_dir)
     print(f'[multitask-{label_schema}] - Current Workdir: {workdir}')
     if not os.path.exists(workdir):
