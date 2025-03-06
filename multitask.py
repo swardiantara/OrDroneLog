@@ -500,7 +500,7 @@ def main(args):
             if args.decoding == 'argmax':
                 for logits in logits_multiclass_test:
                     after_sigmoid = torch.sigmoid(logits)
-                    string_label = label_decoding([1 if element >= 0.5 else 0 for element in after_sigmoid])
+                    string_label = forward_infer([1 if element >= 0.5 else 0 for element in after_sigmoid])
                     pred_prob_sample = after_sigmoid[label_order.index(string_label)]
                     predicted_probs_multiclass_test.append(after_sigmoid.cpu().numpy().tolist())
                     pred_probs_batch.append(pred_prob_sample.cpu().item())
