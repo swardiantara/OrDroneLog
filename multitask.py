@@ -27,54 +27,57 @@ from utils.preprocessing import BaselineDataset, MultitaskDataset, assert_data_s
 from utils.evaluation import RegressionMetrics
 
 
-parser = argparse.ArgumentParser()
+def get_args():
+    parser = argparse.ArgumentParser()
 
-parser.add_argument('--dataset', type=str, default='filtered',
-                    choices=['filtered', 'unfiltered'])
-parser.add_argument('--output_dir', type=str, default='multi_dronelog',
-                    help="Folder to store the experimental results. Default: multitask")
-parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity', 'ordinal-severity', 'vector-ordinal'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
-parser.add_argument('--encoder', type=str, choices=['transformer', 'lstm', 'gru', 'none'], default='none',
-                    help="Encoder Architecture used to perform computation. Default: none.")
-parser.add_argument('--pooling', type=str, choices=['cls', 'max', 'avg', 'last'], default='avg',
-                    help="Pooling mechanism to get final representation. Default: avg")
-parser.add_argument('--bidirectional', action='store_true',
-                    help="Wether to use Bidirectionality for LSTM and GRU.")
-parser.add_argument('--save_best_model', action='store_true',
-                    help="Wether to save best model for each encoder type.")
-parser.add_argument('--viz_projection', action='store_true',
-                    help="Wether to visualize the encoder's output.")
-parser.add_argument('--class_weight', choices=['uniform', 'balanced', 'inverse'], default='uniform',
-                    help="Wether to weigh the class based on the class frequency. Default: Uniform")
-parser.add_argument('--decoding', choices=['forward', 'backward', 'argmax'], default='forward',
-                    help="Label decoding procedure. Default: forward")
-parser.add_argument('--label_schema', choices=['110', '1101', '1111', '0101', '0111'], default='110',
-                    help="Target label schema. Default: 110.")
-parser.add_argument('--loss', choices=['logloss', 'multitask'], default='logloss',
-                    help="Loss function to use. Default: logloss")
-parser.add_argument('--n_heads', type=int, default=1,
-                    help='Number of attention heads')
-parser.add_argument('--n_layers', type=int, default=1,
-                    help='Number of encoder layers')
-parser.add_argument('--n_epochs', type=int, default=15,
-                    help='Number of training iterations')
-parser.add_argument('--batch_size', type=int, default=8,
-                    help='Number of samples in a batch')
-parser.add_argument('--seed', type=int, default=42,
-                    help='Random seed for reproducibility')
-parser.add_argument('--alpha', type=int, default=1,
-                    help='Task weight for binary anomaly detection')
-parser.add_argument('--beta', type=float, default=1,
-                    help='Task weight for multiclass anomaly detection')
+    parser.add_argument('--dataset', type=str, default='filtered',
+                        choices=['filtered', 'unfiltered'])
+    parser.add_argument('--output_dir', type=str, default='multi_dronelog',
+                        help="Folder to store the experimental results. Default: multitask")
+    parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity', 'ordinal-severity', 'vector-ordinal'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
+    parser.add_argument('--encoder', type=str, choices=['transformer', 'lstm', 'gru', 'none'], default='none',
+                        help="Encoder Architecture used to perform computation. Default: none.")
+    parser.add_argument('--pooling', type=str, choices=['cls', 'max', 'avg', 'last'], default='avg',
+                        help="Pooling mechanism to get final representation. Default: avg")
+    parser.add_argument('--bidirectional', action='store_true',
+                        help="Wether to use Bidirectionality for LSTM and GRU.")
+    parser.add_argument('--save_best_model', action='store_true',
+                        help="Wether to save best model for each encoder type.")
+    parser.add_argument('--viz_projection', action='store_true',
+                        help="Wether to visualize the encoder's output.")
+    parser.add_argument('--class_weight', choices=['uniform', 'balanced', 'inverse'], default='uniform',
+                        help="Wether to weigh the class based on the class frequency. Default: Uniform")
+    parser.add_argument('--decoding', choices=['forward', 'backward', 'argmax'], default='forward',
+                        help="Label decoding procedure. Default: forward")
+    parser.add_argument('--label_schema', choices=['110', '1101', '1111', '0101', '0111'], default='110',
+                        help="Target label schema. Default: 110.")
+    parser.add_argument('--loss', choices=['logloss', 'multitask'], default='logloss',
+                        help="Loss function to use. Default: logloss")
+    parser.add_argument('--n_heads', type=int, default=1,
+                        help='Number of attention heads')
+    parser.add_argument('--n_layers', type=int, default=1,
+                        help='Number of encoder layers')
+    parser.add_argument('--n_epochs', type=int, default=15,
+                        help='Number of training iterations')
+    parser.add_argument('--batch_size', type=int, default=8,
+                        help='Number of samples in a batch')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for reproducibility')
+    parser.add_argument('--alpha', type=int, default=1,
+                        help='Task weight for binary anomaly detection')
+    parser.add_argument('--beta', type=float, default=1,
+                        help='Task weight for multiclass anomaly detection')
 
 
-# Arguments for Ablation study
-parser.add_argument('--exclude_cls_before', action='store_true', help="Wether to include CLS token representation before encoder.")
-parser.add_argument('--exclude_cls_after', action='store_true', help="Wether to include CLS token representation after encoder.")
-parser.add_argument('--freeze_embedding', action='store_true', help="Wether to freeze the pre-trained embedding's parameter.")
-parser.add_argument('--normalize_logits', action='store_true', help="Wether to normalize the logits during training.")
+    # Arguments for Ablation study
+    parser.add_argument('--exclude_cls_before', action='store_true', help="Wether to include CLS token representation before encoder.")
+    parser.add_argument('--exclude_cls_after', action='store_true', help="Wether to include CLS token representation after encoder.")
+    parser.add_argument('--freeze_embedding', action='store_true', help="Wether to freeze the pre-trained embedding's parameter.")
+    parser.add_argument('--normalize_logits', action='store_true', help="Wether to normalize the logits during training.")
 
-args = parser.parse_args()
+    args = parser.parse_args()
+
+    return args
 
 
 def set_seed(seed: int = 42) -> None:
@@ -91,6 +94,7 @@ def set_seed(seed: int = 42) -> None:
 
 
 def main():
+    args = get_args()
     # Set global seed for reproducibility
     set_seed(args.seed)
     
