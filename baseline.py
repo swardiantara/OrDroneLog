@@ -279,7 +279,7 @@ def main():
                 logits_multiclass = torch.softmax(logits_multiclass, axis=1)
             # Log the train preds
             preds_multiclass_train = torch.argmax(logits_multiclass, axis=1).cpu().numpy()
-            train_epoch_labels.extend(train_labels_index)
+            train_epoch_labels.extend(train_labels_index.cpu().numpy())
             train_epoch_preds.extend(preds_multiclass_train)
 
             total_train_loss += loss_multiclass_train.item()
@@ -313,7 +313,7 @@ def main():
                 preds_multiclass_val = torch.argmax(logits_multiclass_val, axis=1).cpu().numpy()
                 # Log the val preds
                 total_val_loss += loss_multiclass_val.item()
-                val_epoch_labels.extend(val_labels_index)
+                val_epoch_labels.extend(val_labels_index.cpu().numpy())
                 val_epoch_preds.extend(preds_multiclass_val)
         
         # Logs the val loss, acc, and f1
@@ -398,7 +398,7 @@ def main():
                 logits_multiclass_test = F.softmax(logits_multiclass_test, dim=1)
             predicted_probs_multiclass_test, predicted_labels_multiclass_test = torch.max(logits_multiclass_test, dim=1)
             
-            all_labels_multiclass.extend(labels_index)
+            all_labels_multiclass.extend(labels_index.cpu().numpy())
             # print(f"labels_index: \n{labels_index}")
             all_preds_multiclass.extend(predicted_labels_multiclass_test.cpu().numpy())
             all_preds_probs_multiclass.extend(predicted_probs_multiclass_test.cpu().numpy())
