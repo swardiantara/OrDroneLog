@@ -66,7 +66,7 @@ parser.add_argument('--viz_projection', action='store_true',
                     help="Wether to visualize the encoder's output.")
 parser.add_argument('--class_weight', choices=['uniform', 'balanced', 'inverse'], default='uniform',
                     help="Wether to weigh the class based on the class frequency. Default: Uniform")
-parser.add_argument('--loss', choices=['cross_entropy', 'focal', 'severity_ce', 'severity_focal'], default='cross_entropy',
+parser.add_argument('--loss', default='cross_entropy',
                     help="Loss function to use. Default: cross_entropy")
 parser.add_argument('--n_heads', type=int, default=1,
                     help='Number of attention heads')

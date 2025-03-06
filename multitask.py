@@ -51,7 +51,7 @@ def get_args():
                         help="Label decoding procedure. Default: forward")
     parser.add_argument('--label_schema', choices=['110', '1101', '1111', '0101', '0111'], default='110',
                         help="Target label schema. Default: 110.")
-    parser.add_argument('--loss', choices=['logloss', 'multitask'], default='logloss',
+    parser.add_argument('--loss', default='logloss',
                         help="Loss function to use. Default: logloss")
     parser.add_argument('--n_heads', type=int, default=1,
                         help='Number of attention heads')
