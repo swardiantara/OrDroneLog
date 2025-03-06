@@ -4,6 +4,44 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
+class_names = ['normal', 'low', 'medium', 'high']
+
+def forward_infer(label_vector):
+    # def infer_class_sequential(label_vector, class_names):
+    """
+    Infers the predicted class based on the first zero encountered. Cheng et al., (2009)
+    
+    Args:
+    - label_vector (list): A binary list (e.g., [1, 1, 0, 0])
+    - class_names (list): List of class names in order (e.g., ['normal', 'low', 'medium', 'high'])
+    
+    Returns:
+    - str: Predicted class name
+    """
+    for i in range(len(label_vector)):
+        if label_vector[i] == 0:
+            return class_names[i - 1] if i > 0 else 'normal'  # Handle case where first element is 0
+    return class_names[-1]  # If no zero is found, return the last class
+
+
+def backward_infer(label_vector):
+    # def infer_class_severity(label_vector, class_names):
+    """
+    Infers the predicted class based on the last 1 encountered (severity-oriented decoding).
+    
+    Args:
+    - label_vector (list): A binary list (e.g., [1, 1, 0, 0])
+    - class_names (list): List of class names in order (e.g., ['normal', 'low', 'medium', 'high'])
+    
+    Returns:
+    - str: Predicted class name
+    """
+    for i in range(len(label_vector) - 1, -1, -1):  # Iterate from last to first
+        if label_vector[i] == 1:
+            return class_names[i]
+    return 'normal'  # If all are zero, return None (or 'normal' if that's the default)
+
+
 def label2class(label):
     if label[0] == 1:
         return "high"
@@ -16,7 +54,7 @@ def label2class(label):
             return "normal"
         
         
-def visualize_projection(dataset_loader, label_encoder_multi, model, device, output_dir):
+def visualize_projection(dataset_loader, idx2label, model, device, output_dir):
     lower2capital = {
         'normal': 'Normal',
         'low': 'Low',
@@ -39,7 +77,8 @@ def visualize_projection(dataset_loader, label_encoder_multi, model, device, out
     tsne = TSNE(n_components=2, random_state=42)
     all_embeddings = torch.cat(all_embeddings, dim=0)
     reduced_embeddings = tsne.fit_transform(all_embeddings.cpu().numpy())
-    label_decoded = label_encoder_multi.inverse_transform(all_labels_multiclass)
+    label_decoded = [idx2label.get(key) for key in all_labels_multiclass]
+    # label_encoder_multi.inverse_transform(all_labels_multiclass)
     label_df = pd.DataFrame()
     label_df["label"] = list(label_decoded)
     label_df["label"] = label_df["label"].map(lower2capital)

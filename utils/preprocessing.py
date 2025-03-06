@@ -149,101 +149,134 @@ def label_binary_mapping(label):
             return label
 
 
-def label2multitask110(label):
-    # To comply with the class weights from utils.preprocessing.inverse_freq
-    # and sklearn.utils.class_weight import compute_class_weight,
-    # the order made alphabetically.
-    # [high_anomaly, low_anomaly, medium_anomaly, normal]
-    # normal    = [0, 0, 0, 1]
-    # low       = [0, 1, 0, 1]
-    # medium    = [0, 1, 1, 0]  -> means that the medium shared common features with low
-    # high      = [1, 0, 1, 0]
-    if label == 'normal':
-        return [0, 0, 0, 1]
-    elif label == 'low':
-        return [0, 1, 0, 1]
-    elif label == 'medium':
-        return [0, 1, 1, 0]
-    else:
-        return [1, 0, 1, 0]
+
+label2multitask110 = {
+    'normal': [1, 0, 0, 0],
+    'low': [1, 1, 0, 0],
+    'medium': [0, 1, 1, 0],
+    'high': [0, 0, 1, 1]
+}
+# def label2multitask110(label):
+#     # To comply with the class weights from utils.preprocessing.inverse_freq
+#     # and sklearn.utils.class_weight import compute_class_weight,
+#     # the order made alphabetically.
+#     # [high_anomaly, low_anomaly, medium_anomaly, normal]
+#     # normal    = [0, 0, 0, 1]
+#     # low       = [0, 1, 0, 1]
+#     # medium    = [0, 1, 1, 0]  -> means that the medium shared common features with low
+#     # high      = [1, 0, 1, 0]
+#     if label == 'normal':
+#         return [0, 0, 0, 1]
+#     elif label == 'low':
+#         return [0, 1, 0, 1]
+#     elif label == 'medium':
+#         return [0, 1, 1, 0]
+#     else:
+#         return [1, 0, 1, 0]
     
     
-def label2multitask101(label):
-    # normal    = [0, 0, 0, 0]
-    # low       = [0, 1, 0, 1]
-    # medium    = [0, 0, 1, 1]  -> means that this is an anomaly and the anomaly is medium
-    # high      = [1, 0, 0, 1]
-    normal = 0 if label == "normal" else 1
-    low_anomaly = 1 if label == "low" else 0
-    medium_anomaly = 1 if label == "medium" else 0
-    high_anomaly = 1 if label == "high" else 0
-    # To comply with the class weights from utils.preprocessing.inverse_freq
-    # and sklearn.utils.class_weight import compute_class_weight,
-    # the order made alphabetically.
-    return [high_anomaly, low_anomaly, medium_anomaly, normal]
-    # return [normal, low_anomaly, medium_anomaly, high_anomaly]
+label2multitask0101 = {
+    'normal': [0, 0, 0, 0],
+    'low': [1, 1, 0, 0],
+    'medium': [1, 0, 1, 0],
+    'high': [1, 0, 0, 1]
+}
+
+# def label2multitask101(label):
+#     # normal    = [0, 0, 0, 0]
+#     # low       = [0, 1, 0, 1]
+#     # medium    = [0, 0, 1, 1]  -> means that this is an anomaly and the anomaly is medium
+#     # high      = [1, 0, 0, 1]
+#     normal = 0 if label == "normal" else 1
+#     low_anomaly = 1 if label == "low" else 0
+#     medium_anomaly = 1 if label == "medium" else 0
+#     high_anomaly = 1 if label == "high" else 0
+#     # To comply with the class weights from utils.preprocessing.inverse_freq
+#     # and sklearn.utils.class_weight import compute_class_weight,
+#     # the order made alphabetically.
+#     return [high_anomaly, low_anomaly, medium_anomaly, normal]
+#     # return [normal, low_anomaly, medium_anomaly, high_anomaly]
     
     
-def label2multitask111(label):
-    # normal    = [0, 0, 0, 0]
-    # low       = [0, 1, 0, 1]  -> means that this is an anomaly and the anomaly is low
-    # medium    = [0, 1, 1, 1]
-    # high      = [1, 1, 1, 1]
-    normal = 0 if label == "normal" else 1
-    low_anomaly = 0 if label == "normal" else 1
-    medium_anomaly = 1 if (label == "medium" or label == "high") else 0
-    high_anomaly = 1 if label == "high" else 0
-    # To comply with the class weights from utils.preprocessing.inverse_freq
-    # and sklearn.utils.class_weight import compute_class_weight,
-    # the order made alphabetically.
-    return [high_anomaly, low_anomaly, medium_anomaly, normal]
-    # return [normal, low_anomaly, medium_anomaly, high_anomaly]
+label2multitask0111 = {
+    'normal': [0, 0, 0, 0],
+    'low': [1, 1, 0, 0],
+    'medium': [1, 1, 1, 0],
+    'high': [1, 1, 1, 1]
+}
+
+# def label2multitask0111(label):
+#     # normal    = [0, 0, 0, 0]
+#     # low       = [1, 1, 0, 0]  -> means that this is an anomaly and the anomaly is low
+#     # medium    = [1, 1, 1, 0]
+#     # high      = [1, 1, 1, 1]
+#     normal = 0 if label == "normal" else 1
+#     low_anomaly = 0 if label == "normal" else 1
+#     medium_anomaly = 1 if (label == "medium" or label == "high") else 0
+#     high_anomaly = 1 if label == "high" else 0
+#     # To comply with the class weights from utils.preprocessing.inverse_freq
+#     # and sklearn.utils.class_weight import compute_class_weight,
+#     # the order made alphabetically.
+#     return [normal, low_anomaly, medium_anomaly, high_anomaly]
+#     # return [normal, low_anomaly, medium_anomaly, high_anomaly]
     
     
-def label2multitask0101(label):
-    # normal    = [0, 0, 0, 0]
-    # low       = [0, 1, 0, 1]
-    # medium    = [0, 0, 1, 1]  -> means that this is an anomaly and the anomaly is medium
-    # high      = [1, 0, 0, 1]
-    # normal = 1 if label == "normal" else 0
-    # low_anomaly = 1 if label == "low" else 0
-    # medium_anomaly = 1 if label == "medium" else 0
-    # high_anomaly = 1 if label == "high" else 0
-    # To comply with the class weights from utils.preprocessing.inverse_freq
-    # and sklearn.utils.class_weight import compute_class_weight,
-    # the order made alphabetically.
-    if label == 'normal':
-        return [0, 0, 0, 1]
-    elif label == 'low':
-        return [0, 1, 0, 1]
-    elif label == 'medium':
-        return [0, 0, 1, 1]
-    else:
-        return [1, 0, 0, 1]
-    # return [high_anomaly, low_anomaly, medium_anomaly, normal]
-    # return [normal, low_anomaly, medium_anomaly, high_anomaly]
+label2multitask1101 = {
+    'normal': [1, 0, 0, 0],
+    'low': [1, 1, 0, 0],
+    'medium': [1, 0, 1, 0],
+    'high': [1, 0, 0, 1]
+}
+
+# def label2multitask1101(label):
+#     # normal    = [0, 0, 0, 0]
+#     # low       = [0, 1, 0, 1]
+#     # medium    = [0, 0, 1, 1]  -> means that this is an anomaly and the anomaly is medium
+#     # high      = [1, 0, 0, 1]
+#     # normal = 1 if label == "normal" else 0
+#     # low_anomaly = 1 if label == "low" else 0
+#     # medium_anomaly = 1 if label == "medium" else 0
+#     # high_anomaly = 1 if label == "high" else 0
+#     # To comply with the class weights from utils.preprocessing.inverse_freq
+#     # and sklearn.utils.class_weight import compute_class_weight,
+#     # the order made alphabetically.
+#     if label == 'normal':
+#         return [1, 0, 0, 0]
+#     elif label == 'low':
+#         return [1, 1, 0, 0]
+#     elif label == 'medium':
+#         return [1, 0, 1, 0]
+#     else:
+#         return [1, 0, 0, 1]
+#     # return [high_anomaly, low_anomaly, medium_anomaly, normal]
+#     # return [normal, low_anomaly, medium_anomaly, high_anomaly]
     
     
-def label2multitask0111(label):
-    # normal    = [0, 0, 0, 0]
-    # low       = [0, 1, 0, 1]  -> means that this is an anomaly and the anomaly is low
-    # medium    = [0, 1, 1, 1]
-    # high      = [1, 1, 1, 1]
-    normal = 0 if label == "normal" else 1
-    low_anomaly = 0 if label == "normal" else 1
-    medium_anomaly = 1 if (label == "medium" or label == "high") else 0
-    high_anomaly = 1 if label == "high" else 0
-    # To comply with the class weights from utils.preprocessing.inverse_freq
-    # and sklearn.utils.class_weight import compute_class_weight,
-    # the order made alphabetically.
-    if label == 'normal':
-        return [0, 0, 0, 1]
-    elif label == 'low':
-        return [0, 1, 0, 1]
-    elif label == 'medium':
-        return [0, 1, 1, 1]
-    else:
-        return [1, 1, 1, 1]
-    return [high_anomaly, low_anomaly, medium_anomaly, normal]
-    # return [normal, low_anomaly, medium_anomaly, high_anomaly]
+label2multitask1111 = {
+    'normal': [1, 0, 0, 0],
+    'low': [1, 1, 0, 0],
+    'medium': [1, 1, 1, 0],
+    'high': [1, 1, 1, 1]
+}
+
+# def label2multitask1111(label):
+#     # normal    = [0, 0, 0, 0]
+#     # low       = [0, 1, 0, 1]  -> means that this is an anomaly and the anomaly is low
+#     # medium    = [0, 1, 1, 1]
+#     # high      = [1, 1, 1, 1]
+#     normal = 0 if label == "normal" else 1
+#     low_anomaly = 0 if label == "normal" else 1
+#     medium_anomaly = 1 if (label == "medium" or label == "high") else 0
+#     high_anomaly = 1 if label == "high" else 0
+#     # To comply with the class weights from utils.preprocessing.inverse_freq
+#     # and sklearn.utils.class_weight import compute_class_weight,
+#     # the order made alphabetically.
+#     if label == 'normal':
+#         return [1, 0, 0, 0]
+#     elif label == 'low':
+#         return [1, 1, 0, 0]
+#     elif label == 'medium':
+#         return [1, 1, 1, 0]
+#     else:
+#         return [1, 1, 1, 1]
     

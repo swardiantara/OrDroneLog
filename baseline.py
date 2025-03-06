@@ -1,11 +1,11 @@
 import os
-import copy
 import json
-import torch
+import copy
 import random
-import datetime
 import argparse
+import datetime
 
+import torch
 import numpy as np
 import pandas as pd
 import torch.nn as nn
@@ -18,26 +18,46 @@ from sklearn.utils.class_weight import compute_class_weight
 from transformers import BertModel, BertTokenizer, AutoModel, AutoTokenizer
 from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_recall_fscore_support
 
-from baseline import label2idx, idx2label, raw2label
 from models.dronelog import DroneLog
-from utils.losses import inverse_freq, FocalLoss, MultiTaskLoss
 from utils.assert_scenario import assert_baseline
-from utils.postprocessing import visualize_projection, label2class, visualize_prediction, forward_infer, backward_infer
-from utils.preprocessing import BaselineDataset, MultitaskDataset, assert_data_size, label2multitask110, label2multitask0101, label2multitask0111, label2multitask1101, label2multitask1111
+from utils.preprocessing import BaselineDataset, assert_data_size 
+from utils.postprocessing import visualize_projection, visualize_prediction
+from utils.losses import inverse_freq, FocalLoss, SeverityCE, SeverityFocal
 from utils.evaluation import RegressionMetrics
 
+
+raw2label = {
+        1: 'normal',
+        2: 'low',
+        3: 'medium',
+        4: 'high'
+    }
+
+label2idx = {
+    'normal': 0,
+    'low': 1,
+    'medium': 2,
+    'high': 3
+}
+
+idx2label = {
+    0: 'normal',
+    1: 'low',
+    2: 'medium',
+    3: 'high'
+}
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--dataset', type=str, default='filtered',
                     choices=['filtered', 'unfiltered'])
-parser.add_argument('--output_dir', type=str, default='multi_dronelog',
-                    help="Folder to store the experimental results. Default: multitask")
+parser.add_argument('--output_dir', type=str, default='baseline',
+                    help="Folder to store the experimental results. Default: baseline")
 parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity', 'ordinal-severity', 'vector-ordinal'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
 parser.add_argument('--encoder', type=str, choices=['transformer', 'lstm', 'gru', 'none'], default='none',
                     help="Encoder Architecture used to perform computation. Default: none.")
-parser.add_argument('--pooling', type=str, choices=['cls', 'max', 'avg', 'last'], default='avg',
-                    help="Pooling mechanism to get final representation. Default: avg")
+parser.add_argument('--pooling', type=str, choices=['cls', 'max', 'avg', 'last'], default='max',
+                    help="Pooling mechanism to get final representation for non-RNN models. Default: mean")
 parser.add_argument('--bidirectional', action='store_true',
                     help="Wether to use Bidirectionality for LSTM and GRU.")
 parser.add_argument('--save_best_model', action='store_true',
@@ -46,12 +66,8 @@ parser.add_argument('--viz_projection', action='store_true',
                     help="Wether to visualize the encoder's output.")
 parser.add_argument('--class_weight', choices=['uniform', 'balanced', 'inverse'], default='uniform',
                     help="Wether to weigh the class based on the class frequency. Default: Uniform")
-parser.add_argument('--decoding', choices=['forward', 'backward', 'argmax'], default='forward',
-                    help="Label decoding procedure. Default: forward")
-parser.add_argument('--label_schema', choices=['110', '1101', '1111', '0101', '0111'], default='110',
-                    help="Target label schema. Default: 110.")
-parser.add_argument('--loss', choices=['logloss', 'multitask'], default='logloss',
-                    help="Loss function to use. Default: logloss")
+parser.add_argument('--loss', choices=['cross_entropy', 'focal', 'severity_ce', 'severity_focal'], default='cross_entropy',
+                    help="Loss function to use. Default: cross_entropy")
 parser.add_argument('--n_heads', type=int, default=1,
                     help='Number of attention heads')
 parser.add_argument('--n_layers', type=int, default=1,
@@ -62,10 +78,6 @@ parser.add_argument('--batch_size', type=int, default=8,
                     help='Number of samples in a batch')
 parser.add_argument('--seed', type=int, default=42,
                     help='Random seed for reproducibility')
-parser.add_argument('--alpha', type=int, default=1,
-                    help='Task weight for binary anomaly detection')
-parser.add_argument('--beta', type=float, default=1,
-                    help='Task weight for multiclass anomaly detection')
 
 
 # Arguments for Ablation study
@@ -87,7 +99,6 @@ def set_seed(seed: int = 42) -> None:
     torch.backends.cudnn.benchmark = False
     # Set a fixed value for the hash seed
     os.environ["PYTHONHASHSEED"] = str(seed)
-    # print(f"Random seed set as {seed}")
 
 
 def main():
@@ -107,7 +118,6 @@ def main():
     n_layers = args.n_layers
     n_epochs = args.n_epochs
     bidirectional = True if args.bidirectional else False
-    label_schema = args.label_schema
     save_best_model = True if args.save_best_model else False
     output_dir = f"{args.output_dir}_{args.word_embed}_{str(args.seed)}"
     normalize_logits = True if args.normalize_logits else False
@@ -123,9 +133,9 @@ def main():
         os.makedirs(root_workdir)
 
     scenario_dir = os.path.join(encoder_type, class_weight, loss_fc, pooling, str(
-        n_layers), str(n_heads), 'bidirectional' if bidirectional else 'unidirectional', label_schema)
+        n_layers), str(n_heads), 'bidirectional' if bidirectional else 'unidirectional')
     workdir = os.path.join(root_workdir, scenario_dir)
-    print(f'[multitask-{label_schema}] - Current Workdir: {workdir}')
+    print(f'[baseline-{loss_fc}] - Current Workdir: {workdir}')
     if not os.path.exists(workdir):
         os.makedirs(workdir)
         
@@ -138,8 +148,8 @@ def main():
 
     # Load the dataset
     if args.dataset == 'filtered':
-        dataset_path = 'dataset/merged-manual-unique.csv'
-        train_path = 'dataset/filtered_train.csv'
+        dataset_path = 'dataset/merged-manual-unique.csv' # label int
+        train_path = 'dataset/filtered_train.csv' # label string
         test_path = 'dataset/filtered_test.csv'
     elif args.dataset == 'unfiltered':
         dataset_path = 'dataset/merged-manual-unfiltered.csv'
@@ -147,37 +157,18 @@ def main():
         test_path = 'dataset/unfiltered_test.csv'
     else:
         raise SystemExit("The dataset option is not valid.")
+    
     label_encoder_multi = LabelEncoder()
     dataset = pd.read_csv(dataset_path)
     dataset["label"] = dataset['label'].map(raw2label)
     dataset["multiclass_label"] = dataset['label'].map(label2idx)
     # label_encoder_multi.fit_transform(dataset["label"].to_list())
-    
     train_df = pd.read_csv(train_path)
-    train_df['multiclass_label'] = train_df["label"].map(label2idx)
+    train_df['multiclass_label'] = train_df['label'].map(label2idx)
+    # label_encoder_multi.transform(train_df['label'].to_list())
     test_df = pd.read_csv(test_path)
-    if label_schema == '0101':
-        train_df['multi_task_label'] = train_df["label"].map(label2multitask0101)
-        test_df['multi_task_label'] = test_df["label"].map(label2multitask0101)
-    elif label_schema == '110':
-        train_df['multi_task_label'] = train_df["label"].map(label2multitask110)
-        test_df['multi_task_label'] = test_df["label"].map(label2multitask110)
-    elif label_schema == '0111':
-        train_df['multi_task_label'] = train_df["label"].map(label2multitask0111)
-        test_df['multi_task_label'] = test_df["label"].map(label2multitask0111)
-    elif label_schema == '1101':
-        train_df['multi_task_label'] = train_df["label"].map(label2multitask1101)
-        test_df['multi_task_label'] = test_df["label"].map(label2multitask1101)
-    elif label_schema == '1111':
-        train_df['multi_task_label'] = train_df["label"].map(label2multitask1111)
-        test_df['multi_task_label'] = test_df["label"].map(label2multitask1111)
-    else:
-        raise NotImplementedError("label_schema is invalid!")
-
-
-    # Label decoding procedure
-    if args.decoding != 'argmax':
-        label_decoding = forward_infer if args.decoding == 'forward' else backward_infer
+    test_df['multiclass_label'] = test_df['label'].map(label2idx)
+    # label_encoder_multi.transform(test_df['label'].to_list())
 
     # Compute the class weights
     if class_weight == 'balanced':
@@ -193,6 +184,7 @@ def main():
     # Check the dataset, if the last batch contains only 1 instance
     train_df = assert_data_size(train_df, args.batch_size)
     test_df = assert_data_size(test_df, args.batch_size)
+    
     
     if embedding_type == 'bert':
         bert_model_name = "bert-base-cased"
@@ -220,11 +212,11 @@ def main():
     merged_dataset = BaselineDataset(dataset, tokenizer, max_seq_length)
     merged_loader = DataLoader(merged_dataset, batch_size=batch_size, shuffle=False)
 
-    train_dataset = MultitaskDataset(train_df, tokenizer, max_seq_length)
+    train_dataset = BaselineDataset(train_df, tokenizer, max_seq_length)
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True)
 
-    test_dataset = MultitaskDataset(test_df, tokenizer, max_seq_length)
+    test_dataset = BaselineDataset(test_df, tokenizer, max_seq_length)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     num_classes_multiclass = len(idx2label)
@@ -239,30 +231,26 @@ def main():
         criterion_multiclass = nn.CrossEntropyLoss(weight=class_weights.to(device), reduction='mean')
     elif loss_fc == 'focal':
         criterion_multiclass = FocalLoss(alpha=class_weights.to(device), gamma=2)
-    elif loss_fc == 'logloss':
-        criterion_multiclass = nn.BCEWithLogitsLoss(pos_weight=class_weights.to(device), reduction='mean')
-    elif loss_fc == 'multitask':
-        criterion_multiclass = MultiTaskLoss(alpha=1, beta=1, class_weights=class_weights.to(device), reduction='mean')
+    elif loss_fc == 'severity_ce':
+        criterion_multiclass = SeverityCE(reduction='mean', class_weights=class_weights.to(device))
+    elif loss_fc == 'severity_focal':
+        criterion_multiclass = SeverityFocal(alpha=class_weights.to(device), gamma=2)
     else:
         raise SystemExit("The loss function is not supported.")
     optimizer = optim.AdamW(model.parameters(), lr=2e-5)
 
     # Lists to store training and evaluation metrics
     train_loss_history = []
-    train_binary_history = []
-    train_multilabel_history = []
     train_accuracy_history = []
     train_f1_history = []
     val_loss_history = []
-    val_binary_history = []
-    val_multilabel_history = []
     val_accuracy_history = []
     val_f1_history = []
 
     # Training loop
     num_epochs = n_epochs
     train_started_at = datetime.datetime.now()
-    print(f"[multitask-{label_schema}] - {train_started_at} - Start Training...\n")
+    print(f"[baseline-{loss_fc}] - {train_started_at} - Start Training...\n")
     best_model_state = None  # Initialize as None
     best_acc_epoch = float('-inf')
     best_f1_epoch = float('-inf')
@@ -270,62 +258,42 @@ def main():
     for epoch in range(num_epochs):
         model.train()
         total_train_loss = 0.0
-        total_binary_loss = 0.0
-        total_multilabel_loss = 0.0
         train_epoch_labels = []
         train_epoch_preds = []
         
         for batch in train_loader:
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            class_label_train = batch["class_label"]
-            labels_multiclass_train = batch["labels_multitask"].to(device)
+            train_labels_index = batch["labels_index"]
+            labels_multiclass_train = batch["labels_multiclass"].to(device)
 
             optimizer.zero_grad()
 
             _, logits_multiclass, _ = model(input_ids, attention_mask)
-            # if normalize_logits == True:
-            #     logits_multiclass = torch.softmax(logits_multiclass, axis=1)
             loss_multiclass_train = criterion_multiclass(logits_multiclass, labels_multiclass_train)
             loss_multiclass_train.backward()
             optimizer.step()
 
-            # Calculate training accuracy
-            preds_multiclass_train = []
-            if args.decoding == 'argmax':
+            if normalize_logits == False:
                 logits_multiclass = torch.softmax(logits_multiclass, axis=1)
-                preds_multiclass_train = torch.argmax(logits_multiclass, axis=1).cpu().numpy()
-                preds_multiclass_train = [idx2label.get(idx) for idx in preds_multiclass_train]
-            else:
-                for logits in logits_multiclass:
-                    after_sigmoid = torch.sigmoid(logits)
-                    # after_sigmoid = [1 if (torch.sigmoid(element) >= 0.5) else 0 for element in logits]
-                    string_label = label_decoding([1 if element >= 0.5 else 0 for element in after_sigmoid])
-                    preds_multiclass_train.append(string_label)
-            train_epoch_labels.extend(class_label_train)
+            # Log the train preds
+            preds_multiclass_train = torch.argmax(logits_multiclass, axis=1).cpu().numpy()
+            train_epoch_labels.extend(train_labels_index)
             train_epoch_preds.extend(preds_multiclass_train)
+
             total_train_loss += loss_multiclass_train.item()
-            if loss_fc == 'multitask':
-                total_binary_loss += criterion_multiclass.loss_binary.item()
-                total_multilabel_loss += criterion_multiclass.loss_multilabel.item()
 
         # Logs the train loss, acc, and f1
         train_loss_epoch = total_train_loss / len(train_loader)
-        train_binary_epoch = total_binary_loss / len(train_loader)
-        train_multilabel_epoch = total_multilabel_loss / len(train_loader)
         train_acc_epoch = accuracy_score(train_epoch_labels, train_epoch_preds)
         train_f1_epoch = f1_score(train_epoch_labels, train_epoch_preds, average='micro')
         train_loss_history.append(train_loss_epoch)
         train_accuracy_history.append(train_acc_epoch)
         train_f1_history.append(train_f1_epoch)
-        if loss_fc == 'multitask':
-            train_binary_history.append(train_binary_epoch)
-            train_multilabel_history.append(train_multilabel_epoch)
+
         # In training Evaluation
         model.eval()
         total_val_loss = 0.0
-        total_binary_loss = 0.0
-        total_multilabel_loss = 0.0
         val_epoch_labels = []
         val_epoch_preds = []
         
@@ -333,47 +301,29 @@ def main():
             for batch in test_loader:
                 input_ids = batch["input_ids"].to(device)
                 attention_mask = batch["attention_mask"].to(device)
-                val_labels_class = batch["class_label"]
-                labels_multiclass_val = batch["labels_multitask"].to(device)
+                val_labels_index = batch["labels_index"]
+                labels_multiclass_val = batch["labels_multiclass"].to(device)
 
                 _, logits_multiclass_val, _ = model(input_ids, attention_mask)
-                # if normalize_logits == True:
-                #     logits_multiclass_val = torch.softmax(logits_multiclass_val, axis=1)
-                loss_multiclass_val = criterion_multiclass(
-                    logits_multiclass_val, labels_multiclass_val)
+                loss_multiclass_val = criterion_multiclass(logits_multiclass_val, labels_multiclass_val)
                 
-                # Log the val preds
-                preds_multiclass_val = []
-                if args.decoding == 'argmax':
+                if normalize_logits == False:
                     logits_multiclass_val = torch.softmax(logits_multiclass_val, axis=1)
-                    preds_multiclass_val = torch.argmax(logits_multiclass_val, axis=1).cpu().numpy()
-                    preds_multiclass_val = [idx2label.get(idx) for idx in preds_multiclass_val]
-                else:
-                    for logits in logits_multiclass_val:
-                        after_sigmoid = torch.sigmoid(logits)
-                        # [1 if (torch.sigmoid(element) >= 0.5) else 0 for element in logits]
-                        string_label = label_decoding([1 if element >= 0.5 else 0 for element in after_sigmoid])
-                        preds_multiclass_val.append(string_label)
-                val_epoch_labels.extend(val_labels_class)
-                val_epoch_preds.extend(preds_multiclass_val)
+                preds_multiclass_val = torch.argmax(logits_multiclass_val, axis=1).cpu().numpy()
+                # Log the val preds
                 total_val_loss += loss_multiclass_val.item()
-                if loss_fc == 'multitask':
-                    total_binary_loss += criterion_multiclass.loss_binary.item()
-                    total_multilabel_loss += criterion_multiclass.loss_multilabel.item()
+                val_epoch_labels.extend(val_labels_index)
+                val_epoch_preds.extend(preds_multiclass_val)
         
         # Logs the val loss, acc, and f1
         val_loss_epoch = total_val_loss / len(test_loader)
-        val_binary_epoch = total_binary_loss / len(test_loader)
-        val_multilabel_epoch = total_multilabel_loss / len(test_loader)
         val_acc_epoch = accuracy_score(val_epoch_labels, val_epoch_preds)
         val_f1_epoch = f1_score(val_epoch_labels, val_epoch_preds, average='weighted')
         val_loss_history.append(val_loss_epoch)
         val_accuracy_history.append(val_acc_epoch)
         val_f1_history.append(val_f1_epoch)
-        if loss_fc == 'multitask':
-            val_binary_history.append(val_binary_epoch)
-            val_multilabel_history.append(val_multilabel_epoch)
         print(f"{epoch+1}/{num_epochs}: train_loss: {total_train_loss} - val_loss: {val_loss_epoch} - train_f1: {train_f1_epoch} - val_f1: {val_f1_epoch}")
+
         # Check if the current epoch is the best
         if (val_f1_epoch > best_f1_epoch and val_acc_epoch > best_acc_epoch) or (val_f1_epoch > best_f1_epoch and val_acc_epoch >= best_acc_epoch) or (val_f1_epoch >= best_f1_epoch and val_acc_epoch > best_acc_epoch):
             best_f1_epoch = val_f1_epoch
@@ -398,32 +348,7 @@ def main():
     plt.legend()
     plt.tight_layout()
     plot_loss = plt.gca()
-    plot_loss.get_figure().savefig(os.path.join(workdir, f"train_val_loss.pdf"), format='pdf', bbox_inches='tight')
-    plt.figure(figsize=(6, 4))
-
-    if loss_fc == 'multitask':
-        # Train and Val loss plot
-        plt.figure(figsize=(6, 4))
-        plt.plot(epochs, train_binary_history, label="Train Loss")
-        plt.plot(epochs, val_binary_history, label="Val Loss")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.title("Training and Validation Binary Loss")
-        plt.legend()
-        plt.tight_layout()
-        plot_loss = plt.gca()
-        plot_loss.get_figure().savefig(os.path.join(workdir, f"train_val_binary_loss.pdf"), format='pdf', bbox_inches='tight')
-        plt.figure(figsize=(6, 4))
-
-        plt.plot(epochs, train_multilabel_history, label="Train Loss")
-        plt.plot(epochs, val_multilabel_history, label="Val Loss")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.title("Training and Validation Multilabel Loss")
-        plt.legend()
-        plt.tight_layout()
-        plot_loss = plt.gca()
-        plot_loss.get_figure().savefig(os.path.join(workdir, f"train_val_multilabel_loss.pdf"), format='pdf', bbox_inches='tight')
+    plot_loss.get_figure().savefig(os.path.join(workdir, "train_val_loss.pdf"), format='pdf', bbox_inches='tight')
 
     # Training and test accuracy plot
     plt.figure(figsize=(6, 4))
@@ -435,7 +360,7 @@ def main():
     plt.legend()
     plt.tight_layout()
     plot_accuracy = plt.gca()
-    plot_accuracy.get_figure().savefig(os.path.join(workdir, f"train_val_acc.pdf"), format='pdf', bbox_inches='tight')
+    plot_accuracy.get_figure().savefig(os.path.join(workdir, "train_val_acc.pdf"), format='pdf', bbox_inches='tight')
 
     # Training and test F1 plot
     plt.figure(figsize=(6, 4))
@@ -447,86 +372,62 @@ def main():
     plt.legend()
     plt.tight_layout()
     plot_f1 = plt.gca()
-    plot_f1.get_figure().savefig(os.path.join(workdir, f"train_val_f1.pdf"), format='pdf', bbox_inches='tight')
+    plot_f1.get_figure().savefig(os.path.join(workdir, "train_val_f1.pdf"), format='pdf', bbox_inches='tight')
 
     # Evaluation
     best_model = DroneLog(bert_model, encoder_type,
                                      n_heads, n_layers, freeze_embedding, bidirectional, lstm_hidden_size, pooling, exclude_cls_before, exclude_cls_after, num_classes_multiclass, None, normalize_logits, loss_fc).to(device)
     best_model.load_state_dict(best_model_state)
     best_model.eval()
-    label_order = ['normal', 'low','medium', 'high']
     all_labels_multiclass = []
     all_preds_multiclass = []
     all_preds_probs_multiclass = []
-    all_preds_probs_softmax = []
-    pred_probs_multiclass = []
     eval_started_at = datetime.datetime.now()
     regression_metric = RegressionMetrics()
-    print(f"\n[multitask-{label_schema}] - {eval_started_at} - Start evaluation...\n")
+    print(f"\n[baseline-{loss_fc}] - {eval_started_at} - Start evaluation...\n")
     with torch.no_grad():
         for batch in test_loader:
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
-            label_names = batch["class_label"]
+            labels_index = batch["labels_index"]
 
             _, logits_multiclass_test, _ = best_model(input_ids, attention_mask)
 
-            predicted_labels_multiclass_test = []
-            predicted_label_indices = []
-            predicted_probs_multiclass_test = []
-            pred_probs_batch = []
-            if args.decoding == 'argmax':
-                logits_multiclass_test = torch.softmax(logits_multiclass_test, axis=1)
-                # predicted_labels_multiclass_test = torch.argmax(logits_multiclass_test, axis=1).cpu().numpy()
-                probs_softmax_multiclass_test, predicted_label_indices = torch.max(logits_multiclass_test, dim=1)
-                predicted_labels_multiclass_test = [idx2label.get(idx) for idx in predicted_label_indices.cpu().numpy()]
-                for logits in logits_multiclass_test:
-                    after_sigmoid = torch.sigmoid(logits)
-                    string_label = label_decoding([1 if element >= 0.5 else 0 for element in after_sigmoid])
-                    pred_prob_sample = after_sigmoid[label_order.index(string_label)]
-                    predicted_probs_multiclass_test.append(after_sigmoid.cpu().numpy().tolist())
-                    pred_probs_batch.append(pred_prob_sample.cpu().item())
-            else:
-                for logits in logits_multiclass_test:
-                    after_sigmoid = torch.sigmoid(logits)
-                    string_label = label_decoding([1 if element >= 0.5 else 0 for element in after_sigmoid])
-                    pred_prob_sample = after_sigmoid[label_order.index(string_label)]
-                    predicted_label_indices.append(label2idx.get(string_label))
-                    predicted_labels_multiclass_test.append(string_label)
-                    predicted_probs_multiclass_test.append(after_sigmoid.cpu().numpy().tolist())
-                    pred_probs_batch.append(pred_prob_sample.cpu().item())
-            all_labels_multiclass.extend(label_names)
-            all_preds_multiclass.extend(predicted_labels_multiclass_test)
-            all_preds_probs_multiclass.extend(predicted_probs_multiclass_test)
-            pred_probs_multiclass.extend(pred_probs_batch)
-            all_preds_probs_softmax.extend(probs_softmax_multiclass_test.cpu().numpy())
-            label_indices = [label2idx.get(label) for label in label_names]
-            regression_metric.update(predicted_label_indices, label_indices)
+            if normalize_logits == False:
+                logits_multiclass_test = F.softmax(logits_multiclass_test, dim=1)
+            predicted_probs_multiclass_test, predicted_labels_multiclass_test = torch.max(logits_multiclass_test, dim=1)
+            
+            all_labels_multiclass.extend(labels_index)
+            all_preds_multiclass.extend(predicted_labels_multiclass_test.cpu().numpy())
+            all_preds_probs_multiclass.extend(predicted_probs_multiclass_test.cpu().numpy())
+            regression_metric.update(predicted_labels_multiclass_test, labels_index)
 
     # Calculate multiclass classification accuracy and report
+    preds_decoded = [idx2label.get(key) for key in all_preds_multiclass]
+    # label_encoder_multi.inverse_transform(all_preds_multiclass)
+    tests_decoded = [idx2label.get(key) for key in all_labels_multiclass]
+    # label_encoder_multi.inverse_transform(all_labels_multiclass)
+
     # Save the input, label, and preds for error analysis
     prediction_df = pd.DataFrame()
     prediction_df["message"] = test_df["message"]
-    prediction_df["label"] = list(all_labels_multiclass)
-    prediction_df["pred"] = list(all_preds_multiclass)
-    prediction_df["verdict"] = [label == pred for label, pred in zip(all_labels_multiclass, all_preds_multiclass)]
-    prediction_df["sigmoid_prob"] = list(pred_probs_multiclass)
-    if args.decoding == 'argmax':
-        prediction_df["softmax_prob"] = list(all_preds_probs_softmax)
-    for idx, label_name in enumerate(label_order):
-        prediction_df[f"prob_{label_name}"] = [row[idx] for row in all_preds_probs_multiclass]
-    prediction_df.to_excel(os.path.join(workdir, f"prediction.xlsx"), index=False)
-
-    accuracy = accuracy_score(all_labels_multiclass, all_preds_multiclass)
-    evaluation_report = classification_report(
-        all_labels_multiclass, all_preds_multiclass, digits=5)
+    prediction_df["label"] = list(tests_decoded)
+    prediction_df["pred"] = list(preds_decoded)
+    prediction_df["verdict"] = [label == pred for label, pred in zip(tests_decoded, preds_decoded)]
+    prediction_df["prob"] = all_preds_probs_multiclass
+    prediction_df.to_excel(os.path.join(
+        workdir, "prediction.xlsx"), index=False)
+    
     # Calculate multiclass classification report
-    f1_weighted = f1_score(all_labels_multiclass, all_preds_multiclass, average='weighted')
+    accuracy = accuracy_score(tests_decoded, preds_decoded)
+    f1_weighted = f1_score(tests_decoded, preds_decoded, average='weighted')
+    evaluation_report = classification_report(
+        tests_decoded, preds_decoded, digits=5)
     classification_report_result = classification_report(
-        all_labels_multiclass, all_preds_multiclass, digits=5, output_dict=True)
+        tests_decoded, preds_decoded, digits=5, output_dict=True)
     classification_report_result['macro_avg'] = classification_report_result.pop('macro avg')
     classification_report_result['weighted_avg'] = classification_report_result.pop('weighted avg')
-    micro_pre, micro_rec, micro_f1, _ = precision_recall_fscore_support(all_labels_multiclass, all_preds_multiclass, average='micro')
+    micro_pre, micro_rec, micro_f1, _ = precision_recall_fscore_support(tests_decoded, preds_decoded, average='micro')
     classification_report_result['micro_avg'] = {
         "precision": micro_pre,
         "recall": micro_rec,
@@ -534,23 +435,23 @@ def main():
         }
     classification_report_result['regression'] = regression_metric.compute()
     # Logs the evaluation results into files
-    with open(os.path.join(workdir, f"evaluation_report.json"), 'w') as json_file:
+    with open(os.path.join(workdir, "evaluation_report.json"), 'w') as json_file:
         json.dump(classification_report_result, json_file, indent=4)
-    with open(os.path.join(workdir, f"evaluation_report.txt"), "w") as text_file:
+    with open(os.path.join(workdir, "evaluation_report.txt"), "w") as text_file:
         text_file.write(evaluation_report)
     print("Best epoch: ", best_epoch)
     print("Accuracy:", accuracy)
     print("F1-score:", f1_weighted)
     print("Classification Report:\n", evaluation_report)
     eval_finished_at = datetime.datetime.now()
-    print(f"[multitask-{label_schema}] - {eval_finished_at} - Finish...\n")
+    print(f"[baseline-{loss_fc}] - {eval_finished_at} - Finish...\n")
 
     arguments_dict = vars(args)
     arguments_dict['device'] = "cuda" if torch.cuda.is_available() else "cpu"
     arguments_dict['scenario_dir'] = workdir
-    arguments_dict['best_epoch'] = best_epoch 
-    arguments_dict['best_val_acc'] = best_acc_epoch
+    arguments_dict['best_epoch'] = best_epoch
     arguments_dict['best_val_f1'] = best_f1_epoch
+    arguments_dict['best_val_acc'] = best_acc_epoch
     arguments_dict['train_started_at'] = str(train_started_at)
     arguments_dict['train_finished_at'] = str(train_finished_at)
     train_duration = train_finished_at - train_started_at
@@ -560,14 +461,14 @@ def main():
     eval_duration = eval_finished_at - eval_started_at
     arguments_dict['eval_duration'] = str(eval_duration.total_seconds()) + ' seconds'
     
-    with open(os.path.join(workdir, f'scenario_arguments.json'), 'w') as json_file:
+    with open(os.path.join(workdir, 'scenario_arguments.json'), 'w') as json_file:
         json.dump(arguments_dict, json_file, indent=4)
     
     if viz_projection:
         # Save the model's hidden state to a 2D plot
         visualize_projection(merged_loader, idx2label, best_model.to(device), device, workdir)
         visualize_prediction(test_loader, best_model.to(device), device, workdir, prediction_df)
-        # visualize_projection(merged_loader, label_encoder_multi, best_model.to(device), device, workdir, test_loader, prediction_df)
+        # visualize_dataset(tokenizer, device, max_seq_length, best_model.to(device), workdir)
     
     # Save the best model for each dataset and encoder type
     if save_best_model:
@@ -576,48 +477,51 @@ def main():
             os.makedirs(best_model_dir)
             
             # Save the experimental logs
-            plot_loss.get_figure().savefig(os.path.join(best_model_dir, f"train_val_loss.pdf"), format='pdf', bbox_inches='tight')
-            plot_accuracy.get_figure().savefig(os.path.join(best_model_dir, f"train_val_acc.pdf"), format='pdf', bbox_inches='tight')
-            plot_f1.get_figure().savefig(os.path.join(best_model_dir, f"train_val_f1.pdf"), format='pdf', bbox_inches='tight')
-            prediction_df.to_csv(os.path.join(best_model_dir, f"prediction.csv"), index=False)
-            with open(os.path.join(best_model_dir, f"evaluation_report.json"), 'w') as json_file:
+            plot_loss.get_figure().savefig(os.path.join(best_model_dir, "train_val_loss.pdf"), format='pdf', bbox_inches='tight')
+            plot_accuracy.get_figure().savefig(os.path.join(best_model_dir, "train_val_acc.pdf"), format='pdf', bbox_inches='tight')
+            plot_f1.get_figure().savefig(os.path.join(best_model_dir, "train_val_f1.pdf"), format='pdf', bbox_inches='tight')
+            prediction_df.to_csv(os.path.join(best_model_dir, "prediction.csv"), index=False)
+            with open(os.path.join(best_model_dir, "evaluation_report.json"), 'w') as json_file:
                 json.dump(classification_report_result, json_file, indent=4)
-            with open(os.path.join(best_model_dir, f"evaluation_report.txt"), "w") as text_file:
+            with open(os.path.join(best_model_dir, "evaluation_report.txt"), "w") as text_file:
                 text_file.write(evaluation_report)
-            with open(os.path.join(best_model_dir, f'scenario_arguments.json'), 'w') as json_file:
+            with open(os.path.join(best_model_dir, 'scenario_arguments.json'), 'w') as json_file:
                 json.dump(arguments_dict, json_file, indent=4)
             
             if viz_projection:
                 # Save the model's hidden state to a 2D plot
                 visualize_projection(merged_loader, idx2label, best_model.to(device), device, best_model_dir)
                 visualize_prediction(test_loader, best_model.to(device), device, best_model_dir, prediction_df)
-                # visualize_projection(merged_loader, label_encoder_multi, best_model.to(device), device, best_model_dir, test_loader, prediction_df)
+                
             # Save the model's file
             torch.save(best_model_state, os.path.join(best_model_dir, 'pytorch_model.pt'))
         else:
             # Check the previous best and compare to current model's performance
-            eval_report_path = os.path.join(best_model_dir, f"evaluation_report.json")
+            eval_report_path = os.path.join(best_model_dir, "evaluation_report.json")
             with open(eval_report_path) as eval_report_file:
                 eval_report = json.load(eval_report_file)
                 if (accuracy > eval_report['accuracy'] and f1_weighted > eval_report['weighted_avg']['f1-score']) or (accuracy >= eval_report['accuracy'] and f1_weighted > eval_report['weighted_avg']['f1-score']) or (accuracy > eval_report['accuracy'] and f1_weighted >= eval_report['weighted_avg']['f1-score']):
                     # Save the experimental logs
-                    plot_loss.get_figure().savefig(os.path.join(best_model_dir, f"train_val_loss.pdf"), format='pdf', bbox_inches='tight')
-                    plot_accuracy.get_figure().savefig(os.path.join(best_model_dir, f"train_val_acc.pdf"), format='pdf', bbox_inches='tight')
-                    plot_f1.get_figure().savefig(os.path.join(best_model_dir, f"train_val_f1.pdf"), format='pdf', bbox_inches='tight')
-                    prediction_df.to_csv(os.path.join(best_model_dir, f"prediction.csv"), index=False)
-                    with open(os.path.join(best_model_dir, f"evaluation_report.json"), 'w') as json_file:
+                    plot_loss.get_figure().savefig(os.path.join(best_model_dir, "train_val_loss.pdf"), format='pdf', bbox_inches='tight')
+                    plot_accuracy.get_figure().savefig(os.path.join(best_model_dir, "train_val_acc.pdf"), format='pdf', bbox_inches='tight')
+                    plot_f1.get_figure().savefig(os.path.join(best_model_dir, "train_val_f1.pdf"), format='pdf', bbox_inches='tight')
+                    prediction_df.to_csv(os.path.join(best_model_dir, "prediction.csv"), index=False)
+                    with open(os.path.join(best_model_dir, "evaluation_report.json"), 'w') as json_file:
                         json.dump(classification_report_result, json_file, indent=4)
-                    with open(os.path.join(best_model_dir, f"evaluation_report.txt"), "w") as text_file:
+                    with open(os.path.join(best_model_dir, "evaluation_report.txt"), "w") as text_file:
                         text_file.write(evaluation_report)
-                    with open(os.path.join(best_model_dir, f'scenario_arguments.json'), 'w') as json_file:
+                    with open(os.path.join(best_model_dir, 'scenario_arguments.json'), 'w') as json_file:
                         json.dump(arguments_dict, json_file, indent=4)
                         
                     if viz_projection:
                         # Save the model's hidden state to a 2D plot
                         visualize_projection(merged_loader, idx2label, best_model.to(device), device, best_model_dir)
                         visualize_prediction(test_loader, best_model.to(device), device, best_model_dir, prediction_df)
+
                     # Save the model's file
                     torch.save(best_model_state, os.path.join(best_model_dir, 'pytorch_model.pt'))
+
+        
     return 0
 
 
