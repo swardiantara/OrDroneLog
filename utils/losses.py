@@ -269,11 +269,11 @@ class OrdinalContrastiveLoss(ContrastiveLoss):
         rep_anchor, rep_other = reps
         distances = self.distance_metric(rep_anchor, rep_other)
         # label_distances = label_distances / (self.num_classes - 1)
-        margins = self.margin + label_distances # (2.0 - self.margin) *
+        # margins = self.margin + label_distances # (2.0 - self.margin) *
         is_positive = (label_distances == 0).float()
         losses = 0.5 * (
             is_positive.float() * distances.pow(2) + 
-            (1 - is_positive.float()) * F.relu(margins - distances).pow(2)
+            (1 - is_positive.float()) * F.relu(label_distances - distances).pow(2)
         )
         
         return losses.mean() if self.size_average else losses.sum()

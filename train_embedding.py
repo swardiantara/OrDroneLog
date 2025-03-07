@@ -12,7 +12,7 @@ from scipy.spatial.distance import cosine, euclidean
 from utils.losses import OrdinalContrastiveLoss
 
 
-def scale_l2_value(d, a=0, b=1, d_min=0, d_max=1.7320508075688772):
+def scale_l2_value(d, a=0.5, b=2, d_min=0, d_max=1.7320508075688772):
     """
     Scale a single L2 (Euclidean) distance value to a given range [a, b].
 
@@ -104,12 +104,12 @@ train_dataloader = DataLoader(examples, shuffle=True, batch_size=64)
 train_loss = OrdinalContrastiveLoss(model=model)
 
 # Optional: Define evaluator for validation
-evaluator = EmbeddingSimilarityEvaluator.from_input_examples(examples, name='vector-ordinal')
+evaluator = EmbeddingSimilarityEvaluator.from_input_examples(examples, name='vector-ordinal-2')
 
 # Step 5: Train the model
 num_epochs = 3
 warmup_steps = int(len(train_dataloader) * num_epochs * 0.1)
-output_path = os.path.join('experiments', 'vector-ordinal')
+output_path = os.path.join('experiments', 'vector-ordinal-2')
 model.fit(
     train_objectives=[(train_dataloader, train_loss)],
     evaluator=evaluator,
@@ -119,4 +119,4 @@ model.fit(
 )
 
 # Save the model
-model.save(output_path, 'vector-ordinal')
+model.save(output_path, 'vector-ordinal-2')
