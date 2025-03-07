@@ -1,6 +1,6 @@
 #!/bin/bash
 datasets=( filtered )
-word_embeds=( bert drone-severity ordinal-severity vector-ordinal )
+word_embeds=( vector-max )
 encoders=( transformer lstm gru none )
 weight_class=( uniform )
 losses=( cross_entropy )

@@ -54,7 +54,7 @@ parser.add_argument('--dataset', type=str, default='filtered',
                     choices=['filtered', 'unfiltered'])
 parser.add_argument('--output_dir', type=str, default='baseline',
                     help="Folder to store the experimental results. Default: baseline")
-parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity', 'ordinal-severity', 'vector-ordinal'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
+parser.add_argument('--word_embed', type=str, choices=['bert', 'drone-severity', 'ordinal-severity', 'vector-ordinal', 'vector-max'], default='bert', help='Type of Word Embdding used. Default: BERT-base')
 parser.add_argument('--encoder', type=str, choices=['transformer', 'lstm', 'gru', 'none'], default='none',
                     help="Encoder Architecture used to perform computation. Default: none.")
 parser.add_argument('--pooling', type=str, choices=['cls', 'max', 'avg', 'last'], default='max',
@@ -199,6 +199,10 @@ def main():
         bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
     elif embedding_type == 'vector-ordinal':
         bert_model_name = "swardiantara/vector-ordinal-embedding"
+        tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
+        bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
+    elif embedding_type == 'vector-max':
+        bert_model_name = "swardiantara/vector-ordinal-max"
         tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
         bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
     else:
