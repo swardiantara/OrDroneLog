@@ -229,8 +229,8 @@ def main(args):
         bert_model_name = "swardiantara/ordinal-severity-embedding"
         tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
         bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
-    elif embedding_type == 'vector-ordinal':
-        bert_model_name = "swardiantara/vector-ordinal-embedding"
+    elif embedding_type == 'vector-max':
+        bert_model_name = "swardiantara/vector-ordinal-max"
         tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
         bert_model = AutoModel.from_pretrained(bert_model_name).to(device)
     else:
