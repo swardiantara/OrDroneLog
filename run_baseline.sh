@@ -1,10 +1,10 @@
 #!/bin/bash
 datasets=( filtered )
 word_embeds=( vector-max )
-encoders=( transformer lstm gru none )
+encoders=( lstm gru )
 weight_class=( uniform )
 losses=( cross_entropy )
-poolings=( cls avg max last )
+poolings=( avg )
 bidirectionals=( true false )
 n_layers=( 3 )
 n_heads=( 8 )
