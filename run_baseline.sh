@@ -1,10 +1,10 @@
 #!/bin/bash
 datasets=( filtered )
-word_embeds=( vector-max )
+word_embeds=( bert drone-severity ordinal-severity vector-max )
 encoders=( lstm gru )
 weight_class=( uniform )
 losses=( cross_entropy )
-poolings=( avg )
+poolings=( last avg )
 bidirectionals=( true false )
 n_layers=( 3 )
 n_heads=( 8 )
