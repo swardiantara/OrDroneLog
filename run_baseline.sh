@@ -32,9 +32,9 @@ for dataset in "${datasets[@]}"; do
                                 else
                                     for bidirectional in "${bidirectionals[@]}"; do
                                         if [ "$bidirectional" = true ]; then
-                                            python baseline.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --bidirectional --class_weight "$weight" --loss "$loss" --save_best_model --viz_projection --output_dir baseline --seed "$seed"
+                                            python baseline.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --bidirectional --class_weight "$weight" --pooling "$pooling" --loss "$loss" --save_best_model --viz_projection --output_dir baseline --seed "$seed"
                                         else
-                                            python baseline.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --class_weight "$weight" --loss "$loss" --save_best_model --viz_projection --output_dir baseline --seed "$seed"
+                                            python baseline.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --class_weight "$weight" --pooling "$pooling" --loss "$loss" --save_best_model --viz_projection --output_dir baseline --seed "$seed"
                                         fi
                                     done
                                 fi
