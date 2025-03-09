@@ -11,7 +11,7 @@ def assert_baseline(args) -> None:
         
         if args.pooling == 'last':
             raise SystemExit("Pooling 'last' is only supported for LSTM or GRU encoder.")
-    else:
+    if args.encoder == 'lstm'  or args.encoder == 'gru':
         if args.pooling == 'cls':
             raise SystemExit("Pooling CLS cannot be used for LSTM or GRU encoder.")
     
