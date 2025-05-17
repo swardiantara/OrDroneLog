@@ -6,10 +6,11 @@ from torch.utils.data import DataLoader, Dataset
 from sentence_transformers import SentenceTransformer, InputExample
 from sentence_transformers.readers import InputExample
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
+from huggingface_hub import HfApi, hf_hub_download, repo_exists
 
 from scipy.spatial.distance import cosine, euclidean
 
-from utils.losses import OrdinalContrastiveLoss
+from utils.losses import OrdinalContrastiveLoss, ContrastiveLoss
 
 
 def scale_l2_value(d, a=0.5, b=2, d_min=0, d_max=1.7320508075688772):
@@ -53,10 +54,10 @@ class DroneLogsDataset(Dataset):
         return InputExample(texts=[row['message']], label=row['cluster_id'])
 
 # Load your dataset
-df = pd.read_csv(os.path.join('dataset', 'filtered_train.csv'))  # Assume the CSV has 'message' and 'cluster_id' columns
+df = pd.read_csv(os.path.join('dataset', 'merged-manual-unique.csv'))  # Assume the CSV has 'message' and 'cluster_id' columns
 
 # Create pairs for contrastive learning
-def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = cosine, distance: bool=False):
+def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = euclidean, distance: bool=False):
     label2id = {
         'normal': 1,
         'low': 2,
@@ -78,13 +79,13 @@ def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = cosi
         cluster_df = df[df['label'] == label]
         other_df = df[df['label'] != label]
         for i, row in cluster_df.iterrows():
-            for j, other_row in cluster_df.iterrows():
+            for j, other_row in cluster_df.iloc[i+1].iterrows():
                 if i != j:
                     pair_label = 1
                     if distance:
                         pair_label = 0
                     examples.append(InputExample(texts=[row['message'], other_row['message']], label=int(pair_label)))
-            for j, other_row in other_df.iterrows():
+            for j, other_row in other_df.iloc[i+1].iterrows():
                 pair_label = 0
                 if distance:
                     if label_type == 'nominal':
@@ -104,12 +105,12 @@ train_dataloader = DataLoader(examples, shuffle=True, batch_size=64)
 train_loss = OrdinalContrastiveLoss(model=model)
 
 # Optional: Define evaluator for validation
-evaluator = EmbeddingSimilarityEvaluator.from_input_examples(examples, name='vector-ordinal-2')
+evaluator = EmbeddingSimilarityEvaluator.from_input_examples(examples, name='severity-all')
 
 # Step 5: Train the model
 num_epochs = 3
 warmup_steps = int(len(train_dataloader) * num_epochs * 0.1)
-output_path = os.path.join('experiments', 'vector-ordinal-2')
+output_path = os.path.join('experiments', 'severity-all')
 model.fit(
     train_objectives=[(train_dataloader, train_loss)],
     evaluator=evaluator,
@@ -119,4 +120,15 @@ model.fit(
 )
 
 # Save the model
-model.save(output_path, 'vector-ordinal-2')
+model.save(output_path, 'severity-all')
+
+# push model to Huggingface
+api = HfApi(token=os.getenv("HF_TOKEN"))
+repo_name = f'drone-ordinal-all'
+api.create_repo(repo_id=f'swardiantara/{repo_name}', exist_ok=True, repo_type="model")
+
+api.upload_folder(
+    folder_path=output_path,
+    repo_id=f"swardiantara/{repo_name}",
+    repo_type="model",
+)
