@@ -64,6 +64,12 @@ def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = eucl
         'medium': 3,
         'high': 4
     }
+    id2label = {
+        1: 'normal',
+        2: 'low',
+        3: 'medium',
+        4: 'high'
+    }
     label2vec = {
         'normal': [1,0,0,0],
         'low': [1,1,0,0],
@@ -73,6 +79,7 @@ def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = eucl
     if label_type == 'nominal':
         df['labelidx'] = df['label'].map(label2id)
     elif label_type == 'vector':
+        df['label'] = df['label'].map(id2label)
         df['label_vector'] = df['label'].map(label2vec)
     examples = []
     for label in df['label'].unique():
