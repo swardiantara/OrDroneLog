@@ -38,7 +38,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'Using device: {device}')
 
 # Step 1: Load a pre-trained model
-model_name = 'all-mpnet-base-v2'  # or 'hkunlp/instructor-xl'
+model_name = 'all-MiniLM-L6-v2'  # or 'hkunlp/instructor-xl'
 model = SentenceTransformer(model_name).to(device)
 
 # Step 2: Prepare the dataset
