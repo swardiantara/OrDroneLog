@@ -79,13 +79,13 @@ def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = eucl
         cluster_df = df[df['label'] == label]
         other_df = df[df['label'] != label]
         for i, row in cluster_df.iterrows():
-            for j, other_row in cluster_df.iloc[i+1].iterrows():
+            for j, other_row in cluster_df.iloc[i+1:].iterrows():
                 if i != j:
                     pair_label = 1
                     if distance:
                         pair_label = 0
                     examples.append(InputExample(texts=[row['message'], other_row['message']], label=int(pair_label)))
-            for j, other_row in other_df.iloc[i+1].iterrows():
+            for j, other_row in other_df.iloc[i+1:].iterrows():
                 pair_label = 0
                 if distance:
                     if label_type == 'nominal':
