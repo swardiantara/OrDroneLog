@@ -97,7 +97,6 @@ def create_pairs(df: pd.DataFrame, label_type = "nominal", distance_funct = eucl
                     if label_type == 'nominal':
                         pair_label = abs(row['labelidx'] - other_row['labelidx'])
                     elif label_type == 'vector':
-                        print(f"{row['label_vector']} - {other_row['label_vector']}")
                         pair_label = distance_funct(row['label_vector'], other_row['label_vector'])
                         pair_label = scale_l2_value(pair_label)
                 examples.append(InputExample(texts=[row['message'], other_row['message']], label=int(pair_label)))
