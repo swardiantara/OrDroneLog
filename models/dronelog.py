@@ -92,9 +92,9 @@ class DroneLog(nn.Module):
 
     def get_pooling_layer(self):
         if self.pooling_type == 'avg':
-            return self.mean_pooling()
+            return self.mean_pooling
         elif self.pooling_type == 'max':
-            return self.masked_max_pooling()
+            return self.masked_max_pooling
         elif self.pooling_type == 'cls':
             return None  # No pooling, use [CLS] token representation directly
         elif self.pooling_type == 'last':
