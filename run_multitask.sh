@@ -1,16 +1,17 @@
 #!/bin/bash
 datasets=( filtered )
 word_embeds=( bert drone-severity ordinal-severity vector-max )
-encoders=( transformer lstm gru none )
+encoders=( transformer )
 weight_class=( uniform )
-losses=( logloss multitask )
-label_schemas=( 0101 110 )
+losses=( logloss )
+label_schemas=( 0101 1111 0111 )
 decodings=( forward backward )
-poolings=( cls avg max last )
+poolings=( avg max )
 bidirectionals=( true false )
 n_layers=( 3 )
 n_heads=( 8 )
-seeds=( 14298463 246773155 30288239 82511865 90995999 )
+# seeds=( 14298463 246773155 30288239 82511865 90995999 )
+seeds=( 14298463 )
 
 for dataset in "${datasets[@]}"; do
     echo "dataset: "$dataset""

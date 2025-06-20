@@ -73,12 +73,28 @@ class DroneLog(nn.Module):
         else:
             raise ValueError("Invalid encoder_type. Use 'lstm', 'gru', 'transformer', or 'none'.")
     
+
+    def mean_pooling(self, last_hidden_state, attention_mask):
+        # attention_mask: [batch_size, seq_len]
+        # last_hidden_state: [batch_size, seq_len, hidden_size]
+        mask = attention_mask.unsqueeze(-1).type_as(last_hidden_state)  # [batch_size, seq_len, 1]
+        summed = torch.sum(last_hidden_state * mask, dim=1)
+        counts = torch.clamp(mask.sum(dim=1), min=1e-9)
+        return summed / counts  # [batch_size, hidden_size]
     
+
+    def masked_max_pooling(self, last_hidden_state, attention_mask):
+        # Set padding tokens to a very negative number before max
+        mask = attention_mask.unsqueeze(-1).type_as(last_hidden_state)
+        masked = last_hidden_state.masked_fill(mask == 0, float("-inf"))
+        return torch.max(masked, dim=1).values  # shape: (batch_size, hidden_size)
+    
+
     def get_pooling_layer(self):
         if self.pooling_type == 'avg':
-            return nn.AdaptiveAvgPool1d(1)
+            return self.mean_pooling()
         elif self.pooling_type == 'max':
-            return nn.AdaptiveMaxPool1d(1)
+            return self.masked_max_pooling()
         elif self.pooling_type == 'cls':
             return None  # No pooling, use [CLS] token representation directly
         elif self.pooling_type == 'last':
@@ -121,7 +137,7 @@ class DroneLog(nn.Module):
                 pooled_output = last_hidden_state[:, -1, :]
         else:
             # Perform pooling based on the specified technique (avg or max)
-            pooled_output = self.pooling(last_hidden_state.permute(0, 2, 1)).squeeze(2)
+            pooled_output = self.pooling(bert_output.last_hidden_state, attention_mask).squeeze(2)
 
         logits_1 = self.fc_1(pooled_output)
         if self.normalize_logits:
