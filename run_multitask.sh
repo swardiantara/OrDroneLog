@@ -25,24 +25,24 @@ for dataset in "${datasets[@]}"; do
                                 for pooling in "${poolings[@]}"; do
                                     if [ "$encoder" = "none" ]; then
                                         rm -r cache_dir
-                                        python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir multitask --decoding "$decoding" --seed "$seed"
+                                        python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir fix-pooling --decoding "$decoding" --seed "$seed"
                                     else
                                         for n_layer in "${n_layers[@]}"; do
                                             if [ "$encoder" = "transformer" ]; then
                                                 for n_head in "${n_heads[@]}"; do
                                                     rm -r cache_dir
                                                     # for pooling in "${poolings[@]}"; do
-                                                    python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --n_heads "$n_head" --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir multitask --decoding "$decoding" --seed "$seed"
+                                                    python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --n_heads "$n_head" --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir fix-pooling --decoding "$decoding" --seed "$seed"
                                                     # done
                                                 done
                                             else
                                                 for bidirectional in "${bidirectionals[@]}"; do
                                                     if [ "$bidirectional" = true ]; then
                                                         rm -r cache_dir
-                                                        python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --bidirectional --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir multitask --decoding "$decoding" --seed "$seed"
+                                                        python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --bidirectional --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir fix-pooling --decoding "$decoding" --seed "$seed"
                                                     else
                                                         rm -r cache_dir
-                                                        python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir multitask --decoding "$decoding" --seed "$seed"
+                                                        python multitask.py --dataset "$dataset" --word_embed "$word_embed" --encoder "$encoder" --n_layers "$n_layer" --pooling "$pooling" --class_weight "$weight" --loss "$loss" --label_schema "$label_schema" --viz_projection --output_dir fix-pooling --decoding "$decoding" --seed "$seed"
                                                     fi
                                                 done
                                             fi
