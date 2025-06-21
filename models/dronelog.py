@@ -137,7 +137,7 @@ class DroneLog(nn.Module):
                 pooled_output = last_hidden_state[:, -1, :]
         else:
             # Perform pooling based on the specified technique (avg or max)
-            pooled_output = self.pooling(bert_output.last_hidden_state, attention_mask).squeeze(2)
+            pooled_output = self.pooling(bert_output.last_hidden_state, attention_mask)
 
         logits_1 = self.fc_1(pooled_output)
         if self.normalize_logits:
