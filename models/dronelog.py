@@ -118,7 +118,7 @@ class DroneLog(nn.Module):
             last_hidden_state = last_hidden_state[:, 1:, :]
         
         # Apply encoder if specified
-        if self.encoder is not None:
+        if self.encoder_type != 'none':
             if self.encoder_type == 'transformer':
                 # (bsz, seq_len, d_dim)
                 last_hidden_state = self.encoder(last_hidden_state)
