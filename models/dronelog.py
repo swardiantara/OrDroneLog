@@ -69,7 +69,12 @@ class DroneLog(nn.Module):
                 num_layers=num_layers,
             )
         elif self.encoder_type == 'none':
-            return None
+            return nn.Sequential(
+                nn.Linear(self.bert_model.config.hidden_size, 2048),
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(2048, self.bert_model.config.hidden_size)
+            )
         else:
             raise ValueError("Invalid encoder_type. Use 'lstm', 'gru', 'transformer', or 'none'.")
     
